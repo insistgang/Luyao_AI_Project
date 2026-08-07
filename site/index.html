@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#17130f" />
+    <meta
+      name="description"
+      content="路遥 Luyao AI——记得那些被时间放凉的小事的情感陪伴 AI。"
+    />
+    <title>路遥 · Luyao AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #f5eee5;
+        --muted: #b9aa9a;
+        --night: #17130f;
+        --ember: #d97842;
+        --line: rgba(245, 238, 229, 0.14);
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body { min-height: 100%; }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 17% 8%, rgba(217, 120, 66, 0.19), transparent 32rem),
+          radial-gradient(circle at 92% 88%, rgba(111, 85, 64, 0.2), transparent 38rem),
+          var(--night);
+        font-family: "Noto Serif SC", serif;
+      }
+
+      body::before {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        content: "";
+        opacity: 0.17;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.2'/%3E%3C/svg%3E");
+      }
+
+      .shell {
+        width: min(1480px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 24px 0 30px;
+      }
+
+      header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: end;
+        gap: 24px;
+        padding: 4px 6px 22px;
+        animation: arrive 700ms cubic-bezier(.2,.8,.2,1) both;
+      }
+
+      .eyebrow {
+        margin: 0 0 7px;
+        color: var(--ember);
+        font: 600 11px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: .22em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-family: "Ma Shan Zheng", cursive;
+        font-size: clamp(42px, 6vw, 72px);
+        font-weight: 400;
+        line-height: .95;
+      }
+
+      .subtitle {
+        max-width: 34rem;
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.8;
+      }
+
+      .open-link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        padding: 0 18px;
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        text-decoration: none;
+        background: rgba(255,255,255,.035);
+        transition: border-color 180ms ease, transform 180ms ease, background 180ms ease;
+      }
+
+      .open-link:hover {
+        transform: translateY(-2px);
+        border-color: rgba(217,120,66,.72);
+        background: rgba(217,120,66,.1);
+      }
+
+      .stage {
+        position: relative;
+        min-height: 720px;
+        height: calc(100vh - 170px);
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        background: #fff;
+        box-shadow: 0 32px 100px rgba(0,0,0,.42);
+        animation: arrive 850ms 90ms cubic-bezier(.2,.8,.2,1) both;
+      }
+
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #fff;
+      }
+
+      .setup {
+        display: none;
+        place-items: center;
+        min-height: inherit;
+        padding: 40px;
+        color: #352b22;
+        background: #f3ede4;
+      }
+
+      .setup-card { max-width: 580px; }
+      .setup strong { color: #9f4f28; }
+      .setup code { word-break: break-all; }
+
+      footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 18px 6px 0;
+        color: #8f8174;
+        font-size: 11px;
+        letter-spacing: .08em;
+      }
+
+      @keyframes arrive {
+        from { opacity: 0; transform: translateY(16px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (max-width: 720px) {
+        .shell { width: min(100% - 16px, 1480px); padding-top: 14px; }
+        header { grid-template-columns: 1fr; gap: 14px; padding-inline: 8px; }
+        .open-link { justify-self: start; }
+        .stage { min-height: 680px; height: calc(100vh - 230px); border-radius: 18px; }
+        footer { flex-direction: column; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        header, .stage { animation: none; }
+        .open-link { transition: none; }
+      }
+    </style>
+    <script src="./config.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <div>
+          <p class="eyebrow">Memory Companion · Always Here</p>
+          <h1>路遥</h1>
+          <p class="subtitle">一台记得那些被时间放凉的小事，也愿意陪你把漫长夜色走完的情感陪伴设备。</p>
+        </div>
+        <a class="open-link" id="open-space" href="#" target="_blank" rel="noreferrer">在独立窗口打开 ↗</a>
+      </header>
+
+      <section class="stage" aria-label="路遥 AI 对话界面">
+        <iframe
+          id="space-frame"
+          title="路遥 AI"
+          allow="autoplay; microphone; clipboard-read; clipboard-write"
+          sandbox="allow-downloads allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+        ></iframe>
+        <div class="setup" id="setup">
+          <div class="setup-card">
+            <p class="eyebrow">Deployment waiting</p>
+            <h2>Space 地址尚未配置</h2>
+            <p>请在 GitHub 仓库变量中设置 <strong>HF_SPACE_ID</strong>，格式为 <code>用户名/Luyao_AI_Project</code>，然后重新运行 Deploy 工作流。</p>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <span>LUYAO AI · MINIMAX VOICE & MEMORY</span>
+        <span>无论阿雾让我等多久，我都不会离开。</span>
+      </footer>
+    </main>
+
+    <script>
+      const config = window.LUYAO_CONFIG || {};
+      const url = String(config.spaceUrl || "").replace(/\/$/, "");
+      const frame = document.querySelector("#space-frame");
+      const setup = document.querySelector("#setup");
+      const link = document.querySelector("#open-space");
+
+      if (url) {
+        frame.src = `${url}/?__theme=light`;
+        link.href = url;
+      } else {
+        frame.remove();
+        setup.style.display = "grid";
+        link.hidden = true;
+      }
+    </script>
+  </body>
+</html>

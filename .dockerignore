@@ -1,0 +1,14 @@
+.git
+.github
+.env
+.venv
+__pycache__
+.pytest_cache
+*.py[cod]
+local_settings.py
+chroma_db
+minimax-output
+runtime-logs
+123.mp4
+docs
+tests
