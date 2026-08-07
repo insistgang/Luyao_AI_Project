@@ -1,4 +1,4 @@
-name: Deploy Pages and Hugging Face Space
+name: Deploy GitHub Pages
 
 on:
   push:
@@ -19,8 +19,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -31,75 +31,20 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
 
-  deploy-space:
-    needs: test
-    runs-on: ubuntu-latest
-    outputs:
-      space_id: ${{ steps.deploy.outputs.space_id }}
-      space_url: ${{ steps.deploy.outputs.space_url }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Check deployment configuration
-        id: config
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
-          LUYAO_ACCESS_PASSWORD: ${{ secrets.LUYAO_ACCESS_PASSWORD }}
-          LUYAO_ALLOW_PUBLIC: ${{ vars.LUYAO_ALLOW_PUBLIC }}
-        shell: bash
-        run: |
-          public_access="${LUYAO_ALLOW_PUBLIC,,}"
-          if [[ -n "$HF_TOKEN" && -n "$MINIMAX_API_KEY" ]] && \
-             [[ -n "$LUYAO_ACCESS_PASSWORD" || "$public_access" =~ ^(1|true|yes|on)$ ]]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Space deployment skipped. Configure HF_TOKEN, MINIMAX_API_KEY and LUYAO_ACCESS_PASSWORD."
-          fi
-      - uses: actions/setup-python@v5
-        if: steps.config.outputs.enabled == 'true'
-        with:
-          python-version: "3.12"
-          cache: pip
-      - name: Install Hugging Face client
-        if: steps.config.outputs.enabled == 'true'
-        run: python -m pip install "huggingface_hub>=0.34,<2"
-      - name: Create or update Docker Space
-        id: deploy
-        if: steps.config.outputs.enabled == 'true'
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_SPACE_ID: ${{ vars.HF_SPACE_ID }}
-          HF_SPACE_NAME: ${{ vars.HF_SPACE_NAME }}
-          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
-          LUYAO_ACCESS_PASSWORD: ${{ secrets.LUYAO_ACCESS_PASSWORD }}
-          LUYAO_ACCESS_USER: ${{ vars.LUYAO_ACCESS_USER }}
-          LUYAO_ALLOW_PUBLIC: ${{ vars.LUYAO_ALLOW_PUBLIC }}
-          MINIMAX_API_HOST: ${{ vars.MINIMAX_API_HOST }}
-          MINIMAX_CHAT_MODEL: ${{ vars.MINIMAX_CHAT_MODEL }}
-          MINIMAX_VOICE_ID: ${{ vars.MINIMAX_VOICE_ID }}
-          MINIMAX_SPEECH_MODEL: ${{ vars.MINIMAX_SPEECH_MODEL }}
-          MINIMAX_WHISPER_MODEL: ${{ vars.MINIMAX_WHISPER_MODEL }}
-          LUYAO_MEMORY_DB: ${{ vars.LUYAO_MEMORY_DB }}
-        run: python scripts/sync_hf_space.py
-
   deploy-pages:
-    needs:
-      - test
-      - deploy-space
+    needs: test
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Build Pages artifact
         env:
-          HF_SPACE_ID: ${{ needs.deploy-space.outputs.space_id }}
-          HF_SPACE_URL: ${{ needs.deploy-space.outputs.space_url }}
+          LUYAO_APP_URL: ${{ vars.LUYAO_APP_URL }}
         run: python scripts/build_pages.py --output "$RUNNER_TEMP/pages"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

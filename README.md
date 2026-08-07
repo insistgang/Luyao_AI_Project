@@ -51,6 +51,14 @@ python ui.py
 
 浏览器访问 <http://127.0.0.1:7860>，健康检查位于 <http://127.0.0.1:8000/health>。
 
+## 公开部署
+
+动态服务使用 Render Docker Web Service，品牌入口使用 GitHub Pages：
+
+`https://insistgang.top/Luyao_AI_Project/`
+
+首次部署和 Secret 配置见 [部署指南](docs/DEPLOYMENT.md)。Render 免费实例空闲后会休眠，且本地 ChromaDB 不会跨重启持久化；它适合演示，不应视为生产环境。
+
 ## 从 123.mp4 准备并克隆音色
 
 ~~~powershell

@@ -176,12 +176,12 @@
           <h1>路遥</h1>
           <p class="subtitle">一台记得那些被时间放凉的小事，也愿意陪你把漫长夜色走完的情感陪伴设备。</p>
         </div>
-        <a class="open-link" id="open-space" href="#" target="_blank" rel="noreferrer">在独立窗口打开 ↗</a>
+        <a class="open-link" id="open-app" href="#" target="_blank" rel="noreferrer">在独立窗口打开 ↗</a>
       </header>
 
       <section class="stage" aria-label="路遥 AI 对话界面">
         <iframe
-          id="space-frame"
+          id="app-frame"
           title="路遥 AI"
           allow="autoplay; microphone; clipboard-read; clipboard-write"
           sandbox="allow-downloads allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
@@ -189,8 +189,8 @@
         <div class="setup" id="setup">
           <div class="setup-card">
             <p class="eyebrow">Deployment waiting</p>
-            <h2>Space 地址尚未配置</h2>
-            <p>请在 GitHub 仓库变量中设置 <strong>HF_SPACE_ID</strong>，格式为 <code>用户名/Luyao_AI_Project</code>，然后重新运行 Deploy 工作流。</p>
+            <h2>后端地址尚未配置</h2>
+            <p>请先在 Render 部署服务，再将它的 HTTPS 地址写入 GitHub 仓库变量 <strong>LUYAO_APP_URL</strong>，然后重新运行 Deploy 工作流。</p>
           </div>
         </div>
       </section>
@@ -203,10 +203,10 @@
 
     <script>
       const config = window.LUYAO_CONFIG || {};
-      const url = String(config.spaceUrl || "").replace(/\/$/, "");
-      const frame = document.querySelector("#space-frame");
+      const url = String(config.appUrl || "").replace(/\/$/, "");
+      const frame = document.querySelector("#app-frame");
       const setup = document.querySelector("#setup");
-      const link = document.querySelector("#open-space");
+      const link = document.querySelector("#open-app");
 
       if (url) {
         frame.src = `${url}/?__theme=light`;
