@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+chroma_db/
+minimax-output/
+runtime-logs/
+local_settings.py
