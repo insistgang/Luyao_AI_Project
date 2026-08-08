@@ -1,4 +1,4 @@
-"""Authenticated Gradio entry point for a Hugging Face Docker Space."""
+"""Authenticated Gradio entry point for a managed container host."""
 
 from __future__ import annotations
 
@@ -10,19 +10,24 @@ def _truthy(value: str | None) -> bool:
 
 
 def build_auth(environ: dict[str, str] | os._Environ[str] | None = None):
-    """Require a password on Spaces unless public access is explicitly enabled."""
+    """Require a password on managed hosts unless public access is explicit."""
 
     values = environ if environ is not None else os.environ
     password = values.get("LUYAO_ACCESS_PASSWORD", "").strip()
     allow_public = _truthy(values.get("LUYAO_ALLOW_PUBLIC"))
-    running_on_space = bool(values.get("SPACE_ID") or values.get("SPACE_HOST"))
+    require_auth = _truthy(values.get("LUYAO_REQUIRE_AUTH")) or bool(
+        values.get("SPACE_ID")
+        or values.get("SPACE_HOST")
+        or values.get("RENDER")
+        or values.get("RENDER_SERVICE_ID")
+    )
 
     if password:
         username = values.get("LUYAO_ACCESS_USER", "awu").strip() or "awu"
         return username, password
-    if running_on_space and not allow_public:
+    if require_auth and not allow_public:
         raise RuntimeError(
-            "Hugging Face Space 缺少 LUYAO_ACCESS_PASSWORD；"
+            "托管服务缺少 LUYAO_ACCESS_PASSWORD；"
             "为防止公开消耗 MiniMax 额度，服务已拒绝启动。"
         )
     return None

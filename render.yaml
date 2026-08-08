@@ -1,0 +1,31 @@
+services:
+  - type: web
+    runtime: docker
+    name: luyao-ai-project
+    repo: https://github.com/insistgang/Luyao_AI_Project
+    branch: main
+    region: singapore
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: MINIMAX_API_KEY
+        sync: false
+      - key: LUYAO_ACCESS_PASSWORD
+        sync: false
+      - key: LUYAO_ACCESS_USER
+        value: awu
+      - key: LUYAO_REQUIRE_AUTH
+        value: "true"
+      - key: MINIMAX_API_HOST
+        value: https://api.minimaxi.com
+      - key: MINIMAX_CHAT_MODEL
+        value: abab6.5s-chat
+      - key: MINIMAX_VOICE_ID
+        value: luyao_voice_v1
+      - key: MINIMAX_SPEECH_MODEL
+        value: speech-2.8-hd
+      - key: MINIMAX_WHISPER_MODEL
+        value: speech-2.6-hd

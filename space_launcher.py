@@ -1,4 +1,4 @@
-"""Launch the private FastAPI core and public Gradio process in one Space."""
+"""Launch the private FastAPI core and public Gradio process in one container."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ SETTING_DEFAULTS = {
 def build_local_settings(environ: Mapping[str, str]) -> str:
     api_key = environ.get("MINIMAX_API_KEY", "").strip()
     if not api_key:
-        raise RuntimeError("Hugging Face Space 缺少 MINIMAX_API_KEY Secret。")
+        raise RuntimeError("托管服务缺少 MINIMAX_API_KEY Secret。")
 
     values = {"MINIMAX_API_KEY": api_key}
     values.update(
@@ -35,7 +35,7 @@ def build_local_settings(environ: Mapping[str, str]) -> str:
             for name, default in SETTING_DEFAULTS.items()
         }
     )
-    header = '"""Generated at container start from Hugging Face Secrets."""\n\n'
+    header = '"""Generated at container start from hosting secrets."""\n\n'
     body = "\n".join(
         f"{name} = {json.dumps(value, ensure_ascii=False)}"
         for name, value in values.items()
@@ -50,6 +50,23 @@ def write_runtime_settings(
         build_local_settings(environ or os.environ), encoding="utf-8"
     )
     target.chmod(0o600)
+
+
+def resolve_ui_port(environ: Mapping[str, str]) -> int:
+    """Resolve the public port, preferring an explicit app setting over Render."""
+
+    raw_port = (
+        environ.get("LUYAO_UI_PORT", "").strip()
+        or environ.get("PORT", "").strip()
+        or "7860"
+    )
+    try:
+        port = int(raw_port)
+    except ValueError as exc:
+        raise RuntimeError(f"无效的服务端口：{raw_port!r}") from exc
+    if not 1 <= port <= 65535:
+        raise RuntimeError(f"服务端口超出有效范围：{port}")
+    return port
 
 
 def wait_for_backend(process: subprocess.Popen[bytes], url: str) -> None:
@@ -85,9 +102,12 @@ def main() -> int:
 
     environment = os.environ.copy()
     api_port = int(environment.get("LUYAO_INTERNAL_API_PORT", "8000"))
+    ui_port = resolve_ui_port(environment)
+    if api_port == ui_port:
+        raise RuntimeError("LUYAO_INTERNAL_API_PORT 不能与公开服务端口相同。")
     environment["LUYAO_API_URL"] = f"http://127.0.0.1:{api_port}"
     environment.setdefault("LUYAO_UI_HOST", "0.0.0.0")
-    environment.setdefault("LUYAO_UI_PORT", "7860")
+    environment["LUYAO_UI_PORT"] = str(ui_port)
 
     backend: subprocess.Popen[bytes] | None = None
     frontend: subprocess.Popen[bytes] | None = None

@@ -5,7 +5,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     GRADIO_ANALYTICS_ENABLED=False \
     LUYAO_UI_HOST=0.0.0.0 \
-    LUYAO_UI_PORT=7860 \
     LUYAO_API_URL=http://127.0.0.1:8000
 
 RUN apt-get update \
@@ -25,9 +24,9 @@ COPY --chown=user:user space_app.py space_launcher.py /app/
 RUN mkdir -p /app/chroma_db && chown -R user:user /app
 
 USER user
-EXPOSE 7860
+EXPOSE 7860 10000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7860/', timeout=3)"
+    CMD python -c "import os, urllib.request; port = os.getenv('PORT') or os.getenv('LUYAO_UI_PORT') or '7860'; urllib.request.urlopen(f'http://127.0.0.1:{port}/', timeout=3)"
 
 CMD ["python", "space_launcher.py"]
