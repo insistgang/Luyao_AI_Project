@@ -4,11 +4,13 @@
 
 ## 配置
 
-从 `.env.ecs.example` 复制 `.env.ecs`，限制权限为 `600`。填写访问密码和 MiniMax 中国区 API Key，确认音色 ID 属于该账号。真实凭据文件不会进入 Git 或 Docker 构建上下文。
+从 `.env.ecs.example` 复制 `.env.ecs`，限制权限为 `600`。启用聊天和语音时填写 MiniMax 中国区 API Key，确认音色 ID 属于该账号；需要登录保护时再填写访问密码。真实凭据文件不会进入 Git 或 Docker 构建上下文。
 
-首次只验证界面时，设置 `LUYAO_ALLOW_UNCONFIGURED=true`。默认保留 `LUYAO_REQUIRE_AUTH=true` 和非空访问密码；需要免登录公开预览时，设置 `LUYAO_ALLOW_PUBLIC=true`、`LUYAO_REQUIRE_AUTH=false`，并保持 `MINIMAX_API_KEY` 为空。公开模式会忽略已保存的访问账号和密码，直接展示界面。
+首次只验证界面时，可以设置 `LUYAO_ALLOW_UNCONFIGURED=true` 并保持 `MINIMAX_API_KEY` 为空。默认保留 `LUYAO_REQUIRE_AUTH=true` 和非空访问密码；需要免登录访问时，设置 `LUYAO_ALLOW_PUBLIC=true`、`LUYAO_REQUIRE_AUTH=false`。公开模式会忽略已保存的访问账号和密码，直接展示界面。
 
-预览模式使用空 Key，页面显示“等待配置”，不启用云端聊天和语音。公开预览若配置了 API Key，会拒绝启动，健康检查也拒绝已配置的云端服务。正式启用付费调用前，应恢复访问保护，或先实现调用限额、用户隔离及费用预算，再将 `LUYAO_ALLOW_UNCONFIGURED` 改回 `false`。
+没有 Key 时，页面显示“等待配置”，不启用云端聊天和语音。免登录模式也允许使用付费 Key：填写服务器私有 `.env.ecs` 后重建容器即可，不需要恢复登录；`LUYAO_ALLOW_UNCONFIGURED=true` 只允许空 Key 启动，不会阻止已配置的付费服务。Key 不会发送到浏览器，健康检查也不会调用付费接口。
+
+公开使用意味着任何访客都可能消耗账号额度。当前长期记忆使用默认身份 `awu_001`，不同访客可能共享该身份的记忆；多人公开使用前应实现访客记忆隔离，并避免输入私密信息。调用限额和费用预算属于后续加固事项，不是公开模式的启动条件。
 
 ```bash
 docker compose --env-file .env.ecs -f compose.ecs.yml config --quiet

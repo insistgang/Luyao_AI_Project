@@ -1,4 +1,4 @@
-"""Check the private API and the authenticated UI without calling MiniMax."""
+"""Check the private API and UI without calling MiniMax."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import os
 import urllib.request
 from collections.abc import Mapping
 
-from space_app import _truthy
 from space_launcher import allow_unconfigured_preview, resolve_ui_port
 
 
@@ -25,12 +24,6 @@ def check_health(environ: Mapping[str, str] | None = None) -> None:
     with urllib.request.urlopen(backend_url, timeout=3) as response:
         payload = json.load(response)
     configured = payload.get("config") or {}
-    if (
-        allow_unconfigured_preview(values)
-        and _truthy(values.get("LUYAO_ALLOW_PUBLIC"))
-        and (configured.get("llm_configured") or configured.get("minimax_configured"))
-    ):
-        raise RuntimeError("public preview must not expose configured cloud services")
     preview = (
         allow_unconfigured_preview(values)
         and payload.get("status") == "degraded"

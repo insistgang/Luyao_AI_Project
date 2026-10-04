@@ -41,8 +41,6 @@ def allow_unconfigured_preview(environ: Mapping[str, str]) -> bool:
 def build_local_settings(environ: Mapping[str, str]) -> str:
     api_key = environ.get("MINIMAX_API_KEY", "").strip()
     preview = allow_unconfigured_preview(environ)
-    if api_key and preview and _truthy(environ.get("LUYAO_ALLOW_PUBLIC")):
-        raise RuntimeError("公开预览不能配置 MINIMAX_API_KEY；请先设置调用限额或恢复访问保护。")
     if not api_key and not preview:
         raise RuntimeError("托管服务缺少 MINIMAX_API_KEY Secret。")
 

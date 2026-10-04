@@ -46,15 +46,15 @@ class EcsDeploymentTests(unittest.TestCase):
         )
         self.assertIn('MINIMAX_API_KEY = ""', config)
 
-    def test_public_preview_rejects_a_paid_api_key(self):
-        with self.assertRaises(RuntimeError):
-            build_local_settings(
-                {
-                    "LUYAO_ALLOW_UNCONFIGURED": "true",
-                    "LUYAO_ALLOW_PUBLIC": "true",
-                    "MINIMAX_API_KEY": "test-key",
-                }
-            )
+    def test_public_mode_accepts_an_explicit_paid_api_key(self):
+        config = build_local_settings(
+            {
+                "LUYAO_ALLOW_UNCONFIGURED": "true",
+                "LUYAO_ALLOW_PUBLIC": "true",
+                "MINIMAX_API_KEY": "test-key",
+            }
+        )
+        self.assertIn('MINIMAX_API_KEY = "test-key"', config)
 
     def test_public_access_does_not_silently_enable_unconfigured_preview(self):
         with self.assertRaises(RuntimeError):
@@ -89,10 +89,17 @@ class EcsDeploymentTests(unittest.TestCase):
                 {"LUYAO_ALLOW_UNCONFIGURED": "true", "LUYAO_ALLOW_PUBLIC": "true"}
             )
 
-    def test_public_preview_health_rejects_a_configured_backend(self):
+    def test_public_mode_health_accepts_a_ready_configured_backend(self):
         payload = {"status": "ok", "config": {"llm_configured": True, "minimax_configured": True}}
         responses = [HttpResponse(json.dumps(payload).encode()), HttpResponse(b"UI")]
         with patch("urllib.request.urlopen", side_effect=responses):
+            check_health(
+                {"LUYAO_ALLOW_UNCONFIGURED": "true", "LUYAO_ALLOW_PUBLIC": "true"}
+            )
+
+    def test_public_mode_health_still_rejects_a_degraded_configured_backend(self):
+        payload = {"status": "degraded", "config": {"llm_configured": True, "minimax_configured": True}}
+        with patch("urllib.request.urlopen", return_value=HttpResponse(json.dumps(payload).encode())):
             with self.assertRaises(RuntimeError):
                 check_health(
                     {"LUYAO_ALLOW_UNCONFIGURED": "true", "LUYAO_ALLOW_PUBLIC": "true"}
