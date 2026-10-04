@@ -34,7 +34,7 @@ def build_auth(environ: dict[str, str] | os._Environ[str] | None = None):
 
 
 def main() -> None:
-    from ui import demo
+    from ui import demo, launch_options
 
     demo.queue(default_concurrency_limit=8).launch(
         server_name=os.getenv("LUYAO_UI_HOST", "0.0.0.0"),
@@ -42,6 +42,7 @@ def main() -> None:
         auth=build_auth(),
         auth_message="路遥只向受邀的人开放。请输入分享给你的访问账号与密码。",
         show_error=True,
+        **launch_options(),
     )
 
 

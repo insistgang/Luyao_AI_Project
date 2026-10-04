@@ -1,6 +1,8 @@
 .git
 .github
-.env
+.env*
+!.env.example
+!.env.ecs.example
 .venv
 __pycache__
 .pytest_cache
@@ -12,3 +14,4 @@ runtime-logs
 123.mp4
 docs
 tests
+deploy

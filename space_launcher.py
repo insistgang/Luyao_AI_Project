@@ -23,9 +23,18 @@ SETTING_DEFAULTS = {
 }
 
 
+def allow_unconfigured_preview(environ: Mapping[str, str]) -> bool:
+    truthy = {"1", "true", "yes", "on"}
+    return (
+        environ.get("LUYAO_ALLOW_UNCONFIGURED", "").lower() in truthy
+        and environ.get("LUYAO_REQUIRE_AUTH", "").lower() in truthy
+        and bool(environ.get("LUYAO_ACCESS_PASSWORD", "").strip())
+    )
+
+
 def build_local_settings(environ: Mapping[str, str]) -> str:
     api_key = environ.get("MINIMAX_API_KEY", "").strip()
-    if not api_key:
+    if not api_key and not allow_unconfigured_preview(environ):
         raise RuntimeError("托管服务缺少 MINIMAX_API_KEY Secret。")
 
     values = {"MINIMAX_API_KEY": api_key}
@@ -70,7 +79,8 @@ def resolve_ui_port(environ: Mapping[str, str]) -> int:
 
 
 def wait_for_backend(process: subprocess.Popen[bytes], url: str) -> None:
-    deadline = time.monotonic() + 60
+    startup_timeout = max(1.0, float(os.getenv("LUYAO_STARTUP_TIMEOUT", "180")))
+    deadline = time.monotonic() + startup_timeout
     while time.monotonic() < deadline:
         if process.poll() is not None:
             raise RuntimeError(
@@ -82,18 +92,26 @@ def wait_for_backend(process: subprocess.Popen[bytes], url: str) -> None:
                     return
         except (OSError, urllib.error.URLError):
             time.sleep(0.5)
-    raise TimeoutError("FastAPI 后端在 60 秒内未就绪。")
+    raise TimeoutError(f"FastAPI 后端在 {startup_timeout:g} 秒内未就绪。")
 
 
-def _terminate(process: subprocess.Popen[bytes] | None) -> None:
-    if process is None or process.poll() is not None:
-        return
-    process.terminate()
-    try:
-        process.wait(timeout=10)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait(timeout=5)
+def _stop_processes(
+    frontend: subprocess.Popen[bytes] | None,
+    backend: subprocess.Popen[bytes] | None,
+) -> None:
+    active = [
+        (process, timeout)
+        for process, timeout in [(frontend, 5), (backend, 25)]
+        if process is not None and process.poll() is None
+    ]
+    for process, _ in active:
+        process.terminate()
+    for process, timeout in active:
+        try:
+            process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
 
 
 def main() -> int:
@@ -111,10 +129,12 @@ def main() -> int:
 
     backend: subprocess.Popen[bytes] | None = None
     frontend: subprocess.Popen[bytes] | None = None
+    stopping = False
 
     def stop_children(_signum=None, _frame=None) -> None:
-        _terminate(frontend)
-        _terminate(backend)
+        nonlocal stopping
+        stopping = True
+        _stop_processes(frontend, backend)
 
     signal.signal(signal.SIGTERM, stop_children)
     signal.signal(signal.SIGINT, stop_children)
@@ -140,7 +160,13 @@ def main() -> int:
             cwd=project_root,
             env=environment,
         )
-        return frontend.wait()
+        while not stopping:
+            for process in (backend, frontend):
+                exit_code = process.poll()
+                if exit_code is not None:
+                    return exit_code or 1
+            time.sleep(0.5)
+        return 0
     finally:
         stop_children()
 

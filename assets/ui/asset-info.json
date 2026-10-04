@@ -1,0 +1,12 @@
+{
+  "avatar": {
+    "file": "luyao-avatar.png",
+    "source": "Built-in image generation",
+    "prompt": "Use case: illustration-story. Asset type: square avatar for the fictional Chinese AI companion Luyao, shown as a small profile portrait in a calm everyday chat application. Create a refined editorial gouache illustration of one original adult Chinese woman, around 26, with a short softly curved dark bob, a natural gentle slight smile, relaxed eyes, wearing a muted forest green knitted top. Head and shoulders, front three-quarter view, portrait centered with generous margins so it can be cropped into a circle. Background is a flat pale mint gray with a subtle paper grain; a tiny muted coral accent on the knit collar only. Hand-painted soft brushwork, natural human proportions, restrained detail and strong readable silhouette at 48px. Warm, attentive, calm, tasteful, contemporary Chinese illustration. No anime exaggeration, no photorealism, no sexualization, no text, no logos, no UI, no watermarks. Square composition, opaque background."
+  },
+  "icons": {
+    "source": "https://registry.npmjs.org/lucide-static/-/lucide-static-1.51.0.tgz",
+    "version": "1.51.0",
+    "license": "icons/LICENSE"
+  }
+}

@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import inspect
 import io
 import json
+import logging
 import os
 import re
+import secrets
 import time
 import wave
+from pathlib import Path
 from typing import Any, AsyncIterator
+from urllib.parse import quote
 
 os.environ.setdefault("GRADIO_ANALYTICS_ENABLED", "False")
 
@@ -27,6 +32,67 @@ BUBBLE_DELAY_SECONDS = max(
 _PROCESSING_LOCK: set[str] = set()
 _RECENT_COMPLETIONS: dict[str, float] = {}
 _DUPLICATE_WINDOW_SECONDS = 3.0
+UI_ASSETS = Path(__file__).resolve().parent / "assets" / "ui"
+UI_CSS = (UI_ASSETS / "luyao.css").read_text(encoding="utf-8")
+logger = logging.getLogger(__name__)
+
+
+def _asset_url(filename: str) -> str:
+    prefix = os.getenv("LUYAO_ROOT_PATH", "").rstrip("/")
+    return f"{prefix}/gradio_api/file={quote(str(UI_ASSETS / filename))}"
+
+
+def _connection_badge(state: str, label: str, detail: str = "") -> str:
+    return (
+        f"<span class='connection-badge' data-state='{state}' "
+        f"title='{html.escape(detail, quote=True)}'>"
+        f"<span class='connection-dot' aria-hidden='true'></span>"
+        f"{html.escape(label)}</span>"
+    )
+
+
+def launch_options() -> dict[str, Any]:
+    """Apply the same styling to local and hosted Gradio entry points."""
+    options: dict[str, Any] = {
+        "allowed_paths": [str(UI_ASSETS)],
+        "blocked_paths": [
+            str(Path(__file__).resolve().parent / name)
+            for name in ["local_settings.py", ".env.ecs", "runtime-logs", "chroma_db"]
+        ],
+        "root_path": os.getenv("LUYAO_ROOT_PATH", "").rstrip("/"),
+    }
+    parameters = inspect.signature(gr.Blocks.launch).parameters
+    if "css" in parameters:
+        options["css"] = UI_CSS
+        options["theme"] = _ui_theme()
+    if "footer_links" in parameters:
+        options["footer_links"] = []
+    return options
+
+
+def _ui_theme():
+    return gr.themes.Soft(
+        primary_hue="emerald",
+        secondary_hue="rose",
+        neutral_hue="gray",
+        font=["PingFang SC", "Microsoft YaHei", "sans-serif"],
+        radius_size="sm",
+    )
+
+
+def _browser_state_secret(target: Path | None = None) -> str:
+    configured = os.getenv("LUYAO_BROWSER_STATE_SECRET", "").strip()
+    if configured:
+        return configured
+    target = target or Path(__file__).resolve().parent / "runtime-logs" / "browser-state.key"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with target.open("x", encoding="utf-8") as secret_file:
+            secret_file.write(secrets.token_urlsafe(32))
+    except FileExistsError:
+        pass
+    target.chmod(0o600)
+    return target.read_text(encoding="utf-8").strip()
 
 
 def _display_text(text: str) -> str:
@@ -336,7 +402,7 @@ async def chat_with_backend(
                 current_state = _new_conversation_state(
                     next_model, display
                 )
-                status = f"完成 · {trace_id}" if trace_id else "完成"
+                status = "路遥说完了。"
                 yield "", display, None, status, current_state
                 return
 
@@ -374,7 +440,7 @@ async def chat_with_backend(
                     "",
                     display,
                     None,
-                    f"文字已完成，语音生成失败：{exc}",
+                    "文字已送达，声音暂时没有连上。",
                     current_state,
                 )
                 return
@@ -398,10 +464,7 @@ async def chat_with_backend(
                 current_state = _new_conversation_state(
                     next_model, display
                 )
-                sync_status = (
-                    f"同步播报 {index + 1}/{len(bubbles)}"
-                    + (f" · {trace_id}" if trace_id else "")
-                )
+                sync_status = "路遥正在轻声说。"
                 yield (
                     "",
                     display,
@@ -415,18 +478,15 @@ async def chat_with_backend(
             current_state = _new_conversation_state(
                 next_model, display
             )
-            status = f"完成 · {trace_id}" if trace_id else "完成"
+            status = "路遥说完了。"
             yield "", display, gr.skip(), status, current_state
     except httpx.HTTPStatusError as exc:
-        detail = exc.response.text[:300]
+        logger.warning("chat request failed: HTTP %s", exc.response.status_code)
         display = [
             *base_display,
             {
                 "role": "assistant",
-                "content": (
-                    f"[服务暂时不可用：HTTP "
-                    f"{exc.response.status_code}]"
-                ),
+                "content": "这次没能接上你的话，稍后再试一次好吗？",
             },
         ]
         current_state = _new_conversation_state(
@@ -436,13 +496,14 @@ async def chat_with_backend(
             text,
             display,
             None,
-            f"后端错误：{detail}",
+            "连接暂时中断。",
             current_state,
         )
     except (httpx.HTTPError, RuntimeError, ValueError) as exc:
+        logger.warning("chat failed: %s", type(exc).__name__)
         display = [
             *base_display,
-            {"role": "assistant", "content": f"[生成遇到异常：{exc}]"},
+            {"role": "assistant", "content": "这次没能接上你的话，稍后再试一次好吗？"},
         ]
         current_state = _new_conversation_state(
             prior_model, display
@@ -451,7 +512,7 @@ async def chat_with_backend(
             text,
             display,
             None,
-            f"处理异常：{exc}",
+            "对话暂时不可用。",
             current_state,
         )
     finally:
@@ -467,58 +528,132 @@ async def backend_health() -> str:
             response.raise_for_status()
             payload = response.json()
         config = payload.get("config") or {}
-        return (
-            f"后端：{payload.get('status', 'unknown')} · "
-            f"LLM：{'已配置' if config.get('llm_configured') else '未配置'} · "
-            f"MiniMax：{'已配置' if config.get('minimax_configured') else '未配置'}"
+        if (
+            payload.get("status") == "ok"
+            and config.get("llm_configured")
+            and config.get("minimax_configured")
+        ):
+            return _connection_badge("ready", "已连接", "路遥已准备好")
+        return _connection_badge(
+            "setup", "等待配置", "聊天或语音服务尚未准备好"
         )
     except Exception as exc:
-        return f"后端未连接：{exc}"
+        logger.info("backend health unavailable: %s", type(exc).__name__)
+        return _connection_badge("offline", "未连接", "暂时无法连接对话服务")
+
+
+def reset_conversation():
+    return "", [], None, "新的对话，慢慢开始。", _new_conversation_state([], [])
 
 
 def build_demo() -> gr.Blocks:
-    with gr.Blocks(title="路遥 Luyao AI") as demo:
+    block_options: dict[str, Any] = {
+        "title": "路遥 · 此刻，听你说",
+        "fill_width": True,
+        "fill_height": True,
+    }
+    if "css" in inspect.signature(gr.Blocks).parameters:
+        block_options.update(css=UI_CSS, theme=_ui_theme())
+    avatar = _asset_url("luyao-avatar.png")
+    with gr.Blocks(**block_options) as demo:
         initial_state = _new_conversation_state([], [])
         conversation_state = (
             gr.BrowserState(
                 default_value=initial_state,
-                storage_key="luyao_conversation_v1",
+                storage_key="luyao_conversation_v2",
+                secret=_browser_state_secret(),
             )
             if hasattr(gr, "BrowserState")
             else gr.State(initial_state)
         )
-        gr.Markdown(
-            "# 路遥\n"
-            "一台记得那些被时间放凉的小事的情感陪伴设备。"
-        )
-        status = gr.Markdown("后端状态尚未检查")
-        with gr.Row():
-            health_button = gr.Button("检查后端", size="sm")
-            synthesize_voice = gr.Checkbox(
-                label="生成 MiniMax 柔美语音", value=True
-            )
-        chatbot_options: dict[str, Any] = {
-            "height": 520,
-            "label": "对话",
-        }
-        chatbot_parameters = inspect.signature(gr.Chatbot).parameters
-        if "type" in chatbot_parameters:
-            chatbot_options["type"] = "messages"
-        if "group_consecutive_messages" in chatbot_parameters:
-            chatbot_options["group_consecutive_messages"] = False
-        chatbot = gr.Chatbot(**chatbot_options)
-        audio = gr.Audio(label="路遥的声音（自动播放）", autoplay=True)
-        message = gr.Textbox(
-            label="阿雾",
-            placeholder="比如：我前女友后天要结婚了，我能送她什么？",
-            lines=2,
-        )
-        with gr.Row():
-            send = gr.Button("发送", variant="primary")
-            gr.ClearButton(
-                [message, chatbot, audio, conversation_state],
-                value="清空",
-            )
+        with gr.Row(elem_id="luyao-shell", equal_height=True):
+            with gr.Column(scale=0, min_width=240, elem_id="luyao-sidebar"):
+                gr.HTML(
+                    "<div class='luyao-brand'><span class='brand-name'>路遥</span>"
+                    "<span class='brand-caption'>此刻，听你说。</span></div>",
+                    elem_id="luyao-brand",
+                )
+                new_chat = gr.Button(
+                    "新对话", icon=str(UI_ASSETS / "icons" / "plus.svg"),
+                    elem_id="luyao-new-chat", size="sm",
+                )
+                gr.HTML(
+                    f"<div class='sidebar-portrait'><img src='{avatar}' alt='路遥的插画头像'>"
+                    "<p>不着急。<br>我们慢慢聊。</p></div>",
+                    elem_id="luyao-portrait",
+                )
+                with gr.Accordion("路遥的声音", open=False, elem_id="luyao-player"):
+                    audio_options: dict[str, Any] = {
+                        "label": "语音播放", "show_label": False,
+                        "autoplay": True, "interactive": False,
+                        "elem_id": "luyao-audio", "container": False,
+                    }
+                    if "buttons" in inspect.signature(gr.Audio).parameters:
+                        audio_options["buttons"] = []
+                    audio = gr.Audio(**audio_options)
+                gr.HTML(
+                    "<div class='sidebar-user'><span class='user-avatar'>雾</span>"
+                    "<div><b>阿雾</b><span>此刻的对话</span></div></div>",
+                    elem_id="luyao-user",
+                )
+            with gr.Column(scale=1, min_width=0, elem_id="luyao-main"):
+                with gr.Row(elem_id="luyao-header"):
+                    gr.HTML(
+                        f"<div class='conversation-heading'><img src='{avatar}' alt=''>"
+                        "<div><h1>与你的对话</h1><p>今天，也在这里。</p></div></div>",
+                        elem_id="luyao-heading",
+                    )
+                    connection = gr.HTML(
+                        _connection_badge("checking", "正在连接"),
+                        elem_id="luyao-connection",
+                    )
+                    health_button = gr.Button(
+                        "刷新", icon=str(UI_ASSETS / "icons" / "refresh-cw.svg"),
+                        elem_id="luyao-refresh", size="sm", scale=0, min_width=64,
+                    )
+                chatbot_options: dict[str, Any] = {
+                    "height": 520, "label": "与路遥的对话", "show_label": False,
+                    "container": False, "layout": "bubble", "min_width": 0,
+                    "elem_id": "luyao-chat",
+                    "avatar_images": (None, str(UI_ASSETS / "luyao-avatar.png")),
+                    "placeholder": (
+                        f"<div class='chat-welcome'><img src='{avatar}' alt=''>"
+                        "<span class='welcome-eyebrow'>路遥，在听</span>"
+                        "<h2>阿雾，今天过得怎么样？</h2>"
+                        "<p>开心的、难过的，或只是一些小事。<br>我在，慢慢说。</p></div>"
+                    ),
+                }
+                chatbot_parameters = inspect.signature(gr.Chatbot).parameters
+                if "type" in chatbot_parameters:
+                    chatbot_options["type"] = "messages"
+                if "group_consecutive_messages" in chatbot_parameters:
+                    chatbot_options["group_consecutive_messages"] = False
+                if "buttons" in chatbot_parameters:
+                    chatbot_options["buttons"] = ["copy"]
+                chatbot = gr.Chatbot(**chatbot_options)
+                with gr.Row(elem_id="luyao-starters"):
+                    starters = [
+                        (gr.Button(prompt, size="sm", elem_classes="starter-prompt"), prompt)
+                        for prompt in ["今天有点累。", "还记得那杯奶茶吗？", "想和你聊一聊。"]
+                    ]
+                with gr.Column(min_width=0, elem_id="luyao-composer"):
+                    with gr.Row(elem_id="luyao-input-row"):
+                        message = gr.Textbox(
+                            label="消息", show_label=False, container=False,
+                            placeholder="把此刻的心情告诉我…", lines=2, max_lines=5,
+                            elem_id="luyao-message", scale=1, min_width=0,
+                        )
+                        send = gr.Button(
+                            "发送", variant="primary", size="sm",
+                            icon=str(UI_ASSETS / "icons" / "send.svg"),
+                            elem_id="luyao-send", scale=0, min_width=84,
+                        )
+                    with gr.Row(elem_id="luyao-composer-footer"):
+                        synthesize_voice = gr.Checkbox(
+                            label="语音回复", value=True, container=False,
+                            elem_id="luyao-voice-toggle", scale=0, min_width=110,
+                        )
+                        status = gr.Markdown("随时开始。", elem_id="luyao-activity")
 
         inputs = [
             message,
@@ -539,14 +674,32 @@ def build_demo() -> gr.Blocks:
             "outputs": outputs,
             "concurrency_limit": 1,
             "concurrency_id": "luyao_chat",
+            "show_progress": "hidden",
         }
-        send.click(**event_options)
-        message.submit(**event_options)
-        health_button.click(backend_health, outputs=status)
+        send_event = send.click(**event_options)
+        submit_event = message.submit(**event_options)
+        new_chat.click(
+            reset_conversation, outputs=outputs, queue=False, show_progress="hidden",
+            cancels=[send_event, submit_event],
+        )
+        chatbot.clear(
+            reset_conversation, outputs=outputs, queue=False, show_progress="hidden",
+            cancels=[send_event, submit_event],
+        )
+        for starter, prompt in starters:
+            starter.click(
+                lambda value=prompt: value, outputs=message,
+                queue=False, show_progress="hidden",
+            )
+        health_button.click(
+            backend_health, outputs=connection, queue=False, show_progress="hidden"
+        )
+        demo.load(backend_health, outputs=connection, show_progress="hidden")
         demo.load(
             _restore_display,
             inputs=conversation_state,
             outputs=chatbot,
+            show_progress="hidden",
         )
     return demo
 
@@ -558,7 +711,5 @@ if __name__ == "__main__":
     demo.queue(default_concurrency_limit=8).launch(
         server_name=os.getenv("LUYAO_UI_HOST", "127.0.0.1"),
         server_port=int(os.getenv("LUYAO_UI_PORT", "7860")),
+        **launch_options(),
     )
-
-
-
