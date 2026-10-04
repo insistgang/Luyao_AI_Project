@@ -50,6 +50,18 @@ class UiControlRegressionTests(unittest.IsolatedAsyncioTestCase):
             for component in config["components"]
         }
 
+    def test_launch_options_use_existing_avatar_as_favicon(self) -> None:
+        options = ui.launch_options()
+        expected_path = (
+            Path(ui.__file__).resolve().parent
+            / "assets"
+            / "ui"
+            / "luyao-avatar.png"
+        )
+
+        self.assertEqual(Path(options["favicon_path"]).resolve(), expected_path)
+        self.assertTrue(expected_path.is_file())
+
     def test_browser_state_secret_persists_with_private_permissions(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "browser-state.key"

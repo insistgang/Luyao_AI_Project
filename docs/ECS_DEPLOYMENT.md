@@ -29,6 +29,8 @@ docker compose --env-file .env.ecs -f compose.ecs.yml ps
 
 当前域名入口为 `https://dmp.insistgang.top/luyao/`，复用该域名已有的 DNS 和 HTTPS 证书。在它的 HTTPS `server` 块中包含上述 location 文件，不改变主域名博客的解析或其他应用路由。原 IP 的 `/luyao/` 路径重定向到此域名。
 
+主域名的统一入口为 `https://insistgang.top/luyao/`。该入口由 Hexo 发布独立全屏页面，嵌入上述阿里云应用，浏览器地址栏保持主域名；后端并未迁入 GitHub Pages，也不是同源反向代理。主域名入口和 Gradio 应用都使用现有路遥头像作为网页图标。
+
 ## 验证和更新
 
 镜像安装 `requirements.lock` 中的已测试版本。容器健康检查同时检查 FastAPI 和 Gradio；正式模式要求后端状态为 `ok`，预览模式允许如实报告未配置的 `degraded` 状态。两种模式都不在健康检查中消耗 MiniMax API 额度。

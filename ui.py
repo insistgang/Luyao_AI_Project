@@ -55,6 +55,7 @@ def launch_options() -> dict[str, Any]:
     """Apply the same styling to local and hosted Gradio entry points."""
     options: dict[str, Any] = {
         "allowed_paths": [str(UI_ASSETS)],
+        "favicon_path": str(UI_ASSETS / "luyao-avatar.png"),
         "blocked_paths": [
             str(Path(__file__).resolve().parent / name)
             for name in ["local_settings.py", ".env.ecs", "runtime-logs", "chroma_db"]
