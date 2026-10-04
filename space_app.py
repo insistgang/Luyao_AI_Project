@@ -1,4 +1,4 @@
-"""Authenticated Gradio entry point for a managed container host."""
+"""Gradio entry point with protected hosting and explicit public access."""
 
 from __future__ import annotations
 
@@ -15,6 +15,8 @@ def build_auth(environ: dict[str, str] | os._Environ[str] | None = None):
     values = environ if environ is not None else os.environ
     password = values.get("LUYAO_ACCESS_PASSWORD", "").strip()
     allow_public = _truthy(values.get("LUYAO_ALLOW_PUBLIC"))
+    if allow_public:
+        return None
     require_auth = _truthy(values.get("LUYAO_REQUIRE_AUTH")) or bool(
         values.get("SPACE_ID")
         or values.get("SPACE_HOST")
@@ -25,7 +27,7 @@ def build_auth(environ: dict[str, str] | os._Environ[str] | None = None):
     if password:
         username = values.get("LUYAO_ACCESS_USER", "awu").strip() or "awu"
         return username, password
-    if require_auth and not allow_public:
+    if require_auth:
         raise RuntimeError(
             "托管服务缺少 LUYAO_ACCESS_PASSWORD；"
             "为防止公开消耗 MiniMax 额度，服务已拒绝启动。"

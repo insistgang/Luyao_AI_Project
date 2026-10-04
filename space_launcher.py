@@ -13,6 +13,8 @@ import urllib.request
 from collections.abc import Mapping
 from pathlib import Path
 
+from space_app import _truthy
+
 
 SETTING_DEFAULTS = {
     "MINIMAX_API_HOST": "https://api.minimaxi.com",
@@ -24,17 +26,24 @@ SETTING_DEFAULTS = {
 
 
 def allow_unconfigured_preview(environ: Mapping[str, str]) -> bool:
-    truthy = {"1", "true", "yes", "on"}
     return (
-        environ.get("LUYAO_ALLOW_UNCONFIGURED", "").lower() in truthy
-        and environ.get("LUYAO_REQUIRE_AUTH", "").lower() in truthy
-        and bool(environ.get("LUYAO_ACCESS_PASSWORD", "").strip())
+        _truthy(environ.get("LUYAO_ALLOW_UNCONFIGURED"))
+        and (
+            _truthy(environ.get("LUYAO_ALLOW_PUBLIC"))
+            or (
+                _truthy(environ.get("LUYAO_REQUIRE_AUTH"))
+                and bool(environ.get("LUYAO_ACCESS_PASSWORD", "").strip())
+            )
+        )
     )
 
 
 def build_local_settings(environ: Mapping[str, str]) -> str:
     api_key = environ.get("MINIMAX_API_KEY", "").strip()
-    if not api_key and not allow_unconfigured_preview(environ):
+    preview = allow_unconfigured_preview(environ)
+    if api_key and preview and _truthy(environ.get("LUYAO_ALLOW_PUBLIC")):
+        raise RuntimeError("公开预览不能配置 MINIMAX_API_KEY；请先设置调用限额或恢复访问保护。")
+    if not api_key and not preview:
         raise RuntimeError("托管服务缺少 MINIMAX_API_KEY Secret。")
 
     values = {"MINIMAX_API_KEY": api_key}

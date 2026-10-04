@@ -100,6 +100,18 @@ class HostedRuntimeTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             self.assertIsNone(build_auth())
 
+    def test_explicit_public_access_ignores_saved_login_credentials(self) -> None:
+        self.assertIsNone(
+            build_auth(
+                {
+                    "LUYAO_REQUIRE_AUTH": "true",
+                    "LUYAO_ALLOW_PUBLIC": "true",
+                    "LUYAO_ACCESS_USER": "friend",
+                    "LUYAO_ACCESS_PASSWORD": "old-private-password",
+                }
+            )
+        )
+
     def test_render_port_is_used_unless_explicitly_overridden(self) -> None:
         self.assertEqual(resolve_ui_port({"PORT": "10000"}), 10000)
         self.assertEqual(
