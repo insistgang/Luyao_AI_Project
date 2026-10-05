@@ -108,6 +108,8 @@ class PersonaAgent:
             buffer += delta
             phrases, buffer = split_complete_phrases(buffer)
             for phrase in phrases:
+                if not phrase.strip():
+                    continue
                 checked = self._guardrail.inspect_output(phrase)
                 yield checked.text
                 emitted = True
@@ -142,4 +144,3 @@ class PersonaAgent:
         ]
         checked = self._guardrail.inspect_output("".join(parts))
         return checked.text
-
