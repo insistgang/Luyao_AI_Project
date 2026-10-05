@@ -135,7 +135,7 @@ class UiControlRegressionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("data-state='ready'", result)
         self.assertIn("已连接", result)
 
-    async def test_backend_health_renders_setup_when_credentials_are_missing(self) -> None:
+    async def test_backend_health_renders_text_only_state_when_voice_is_missing(self) -> None:
         FakeHealthClient.payload = {
             "status": "ok",
             "config": {
@@ -146,10 +146,10 @@ class UiControlRegressionTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(ui.httpx, "AsyncClient", FakeHealthClient):
             result = await ui.backend_health()
 
-        self.assertIn("data-state='setup'", result)
-        self.assertIn("等待配置", result)
+        self.assertIn("data-state='ready'", result)
+        self.assertIn("文字已连接", result)
 
-    async def test_backend_health_renders_setup_when_backend_is_degraded(self) -> None:
+    async def test_backend_health_renders_limited_when_configured_backend_is_degraded(self) -> None:
         FakeHealthClient.payload = {
             "status": "degraded",
             "config": {
@@ -161,7 +161,7 @@ class UiControlRegressionTests(unittest.IsolatedAsyncioTestCase):
             result = await ui.backend_health()
 
         self.assertIn("data-state='setup'", result)
-        self.assertIn("等待配置", result)
+        self.assertIn("连接受限", result)
 
     async def test_backend_health_hides_transport_error_details(self) -> None:
         secret_like_detail = "TOKEN=raw-secret-value"

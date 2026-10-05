@@ -30,6 +30,11 @@ jobs:
         run: cp local_settings.example.py local_settings.py
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Test UI keyboard interactions
+        run: node --test tests/ui_interactions.test.cjs
 
   deploy-pages:
     needs: test

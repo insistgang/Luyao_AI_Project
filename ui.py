@@ -34,6 +34,7 @@ _RECENT_COMPLETIONS: dict[str, float] = {}
 _DUPLICATE_WINDOW_SECONDS = 3.0
 UI_ASSETS = Path(__file__).resolve().parent / "assets" / "ui"
 UI_CSS = (UI_ASSETS / "luyao.css").read_text(encoding="utf-8")
+UI_JS = (UI_ASSETS / "luyao.js").read_text(encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 
@@ -42,13 +43,19 @@ def _asset_url(filename: str) -> str:
     return f"{prefix}/gradio_api/file={quote(str(UI_ASSETS / filename))}"
 
 
-def _connection_badge(state: str, label: str, detail: str = "") -> str:
+def _connection_badge(state: str, label: str, detail: str = "", *, voice_ready: bool | None = None) -> str:
+    capability = "" if voice_ready is None else f" data-voice-ready='{str(voice_ready).lower()}'"
     return (
-        f"<span class='connection-badge' data-state='{state}' "
+        f"<span class='connection-badge' data-state='{state}'{capability} "
         f"title='{html.escape(detail, quote=True)}'>"
         f"<span class='connection-dot' aria-hidden='true'></span>"
         f"{html.escape(label)}</span>"
     )
+
+
+def _activity(state: str, label: str) -> str:
+    role = "alert" if state in {"error", "setup", "offline"} else "status"
+    return f"<span class='activity-message' data-state='{state}' role='{role}'>{html.escape(label)}</span>"
 
 
 def launch_options() -> dict[str, Any]:
@@ -66,6 +73,8 @@ def launch_options() -> dict[str, Any]:
     if "css" in parameters:
         options["css"] = UI_CSS
         options["theme"] = _ui_theme()
+    if "js" in parameters:
+        options["js"] = UI_JS
     if "footer_links" in parameters:
         options["footer_links"] = []
     return options
@@ -149,11 +158,14 @@ def _display_history(
 def _new_conversation_state(
     model_history: list[dict[str, str]],
     display_history: list[dict[str, str]],
+    *, pending_turn: bool = False, model_complete: bool = False,
 ) -> dict[str, Any]:
     return {
         "version": 1,
         "model_history": model_history[-40:],
         "display_history": display_history[-80:],
+        "pending_turn": pending_turn,
+        "model_complete": model_complete,
     }
 
 
@@ -270,8 +282,8 @@ def _split_into_bubbles(text: str, max_chars: int = 22) -> list[str]:
     return bubbles
 
 
-def _submission_key(message: str, history: list[dict[str, str]]) -> str:
-    return json.dumps([message, history], ensure_ascii=False, sort_keys=True)
+def _submission_key(message: str, history: list[dict[str, str]], session_id: str | None = None) -> str:
+    return json.dumps([session_id, message, history], ensure_ascii=False, sort_keys=True)
 
 
 async def chat_with_backend(
@@ -279,6 +291,7 @@ async def chat_with_backend(
     history: list[dict[str, Any]] | None,
     synthesize_voice: bool,
     conversation_state: dict[str, Any] | str | None = None,
+    session_id: str | None = None,
 ) -> AsyncIterator[
     tuple[
         str,
@@ -299,7 +312,7 @@ async def chat_with_backend(
         yield "", prior_display, None, "请输入一段话。", current_state
         return
 
-    lock_key = _submission_key(text, prior_model)
+    lock_key = _submission_key(text, prior_model, session_id)
     now = time.monotonic()
     stale_before = now - 30.0
     for key, completed_at in tuple(_RECENT_COMPLETIONS.items()):
@@ -324,7 +337,7 @@ async def chat_with_backend(
     next_model = list(prior_model)
     try:
         current_state = _new_conversation_state(
-            prior_model, base_display
+            prior_model, base_display, pending_turn=True
         )
         yield "", display, None, "路遥正在思考…", current_state
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
@@ -356,13 +369,13 @@ async def chat_with_backend(
                                 ),
                             ]
                             current_state = _new_conversation_state(
-                                prior_model, display
+                                prior_model, display, pending_turn=True
                             )
                             yield (
                                 "",
                                 display,
                                 None,
-                                "路遥正在一条条回复…",
+                                "正在回复…",
                                 current_state,
                             )
                             if BUBBLE_DELAY_SECONDS:
@@ -401,20 +414,20 @@ async def chat_with_backend(
                     ),
                 ]
                 current_state = _new_conversation_state(
-                    next_model, display
+                    next_model, display, pending_turn=True, model_complete=True
                 )
                 status = "路遥说完了。"
                 yield "", display, None, status, current_state
                 return
 
             current_state = _new_conversation_state(
-                next_model, base_display
+                next_model, base_display, pending_turn=True, model_complete=True
             )
             yield (
                 "",
                 base_display,
                 None,
-                "正在生成一次完整语音…",
+                "正在准备语音…",
                 current_state,
             )
             try:
@@ -435,7 +448,7 @@ async def chat_with_backend(
                     ),
                 ]
                 current_state = _new_conversation_state(
-                    next_model, display
+                    next_model, display, pending_turn=True, model_complete=True
                 )
                 yield (
                     "",
@@ -463,7 +476,7 @@ async def chat_with_backend(
                     audio_value if index == 0 else gr.skip()
                 )
                 current_state = _new_conversation_state(
-                    next_model, display
+                    next_model, display, pending_turn=True, model_complete=True
                 )
                 sync_status = "路遥正在轻声说。"
                 yield (
@@ -477,19 +490,13 @@ async def chat_with_backend(
             if delays and delays[-1] > 0:
                 await asyncio.sleep(delays[-1])
             current_state = _new_conversation_state(
-                next_model, display
+                next_model, display, pending_turn=True, model_complete=True
             )
             status = "路遥说完了。"
             yield "", display, gr.skip(), status, current_state
     except httpx.HTTPStatusError as exc:
         logger.warning("chat request failed: HTTP %s", exc.response.status_code)
-        display = [
-            *base_display,
-            {
-                "role": "assistant",
-                "content": "这次没能接上你的话，稍后再试一次好吗？",
-            },
-        ]
+        display = prior_display
         current_state = _new_conversation_state(
             prior_model, display
         )
@@ -502,10 +509,7 @@ async def chat_with_backend(
         )
     except (httpx.HTTPError, RuntimeError, ValueError) as exc:
         logger.warning("chat failed: %s", type(exc).__name__)
-        display = [
-            *base_display,
-            {"role": "assistant", "content": "这次没能接上你的话，稍后再试一次好吗？"},
-        ]
+        display = prior_display
         current_state = _new_conversation_state(
             prior_model, display
         )
@@ -522,29 +526,122 @@ async def chat_with_backend(
             _RECENT_COMPLETIONS[lock_key] = time.monotonic()
 
 
+async def _read_service_health() -> dict[str, Any]:
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(f"{BACKEND_URL}/health")
+        response.raise_for_status()
+        payload = response.json()
+    if not isinstance(payload, dict) or not isinstance(payload.get("config"), dict) or payload.get("status") not in {"ok", "degraded"}:
+        raise ValueError("Invalid service health response")
+    return payload
+
+
+def _service_state(payload: dict[str, Any]) -> tuple[str, str, bool]:
+    config = payload["config"]
+    if not config.get("llm_configured"):
+        return "setup", "聊天服务尚未配置，消息未发送。", False
+    voice_ready = bool(config.get("minimax_configured"))
+    if payload.get("status") != "ok" and voice_ready:
+        return "ready", "部分服务异常。", voice_ready
+    return "ready", "" if voice_ready else "语音服务尚未配置。", voice_ready
+
+
+def _health_badge(state: str, detail: str, voice_ready: bool) -> str:
+    label = {"setup": "聊天未配置", "offline": "服务未连接", "ready": "已连接" if voice_ready else "文字已连接"}[state]
+    if state == "ready" and detail == "部分服务异常。":
+        state, label = "setup", "连接受限"
+    return _connection_badge(state, label, detail or "路遥已准备好", voice_ready=voice_ready)
+
+
 async def backend_health() -> str:
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{BACKEND_URL}/health")
-            response.raise_for_status()
-            payload = response.json()
-        config = payload.get("config") or {}
-        if (
-            payload.get("status") == "ok"
-            and config.get("llm_configured")
-            and config.get("minimax_configured")
-        ):
-            return _connection_badge("ready", "已连接", "路遥已准备好")
-        return _connection_badge(
-            "setup", "等待配置", "聊天或语音服务尚未准备好"
-        )
+        return _health_badge(*_service_state(await _read_service_health()))
     except Exception as exc:
         logger.info("backend health unavailable: %s", type(exc).__name__)
-        return _connection_badge("offline", "未连接", "暂时无法连接对话服务")
+        return _health_badge("offline", "暂时无法连接对话服务", False)
+
+
+def _voice_ready(state: dict[str, Any] | str | None) -> bool:
+    if isinstance(state, str):
+        try:
+            state = json.loads(state)
+        except ValueError:
+            return False
+    return bool(isinstance(state, dict) and state.get("voice_ready"))
+
+
+def _idle_controls(voice_ready: bool | None = None):
+    voice = gr.update(value=False) if voice_ready is False else gr.skip()
+    return gr.update(visible=True, interactive=True), gr.update(visible=False), voice
+
+
+async def submit_message(message, history, synthesize_voice, conversation_state=None, request: gr.Request = None):
+    text = (message or "").strip()
+    model, display = _state_histories(conversation_state, history)
+    stored = {**_new_conversation_state(model, display), "voice_ready": _voice_ready(conversation_state)}
+    if not text:
+        yield gr.update(value="", interactive=True), display, None, _activity("idle", ""), stored, *_idle_controls(), gr.skip()
+        return
+    yield gr.update(interactive=False), display, None, _activity("busy", "正在检查服务…"), stored, gr.update(visible=False), gr.update(visible=True), gr.skip(), gr.skip()
+    try:
+        state, detail, voice_ready = _service_state(await _read_service_health())
+    except (httpx.HTTPError, ValueError) as exc:
+        logger.info("submission preflight failed: %s", type(exc).__name__)
+        state, detail, voice_ready = "offline", "无法连接服务，消息未发送。", False
+    stored["voice_ready"] = voice_ready
+    if state != "ready":
+        yield gr.update(value=message, interactive=True), display, None, _activity("error", detail), stored, *_idle_controls(voice_ready), _health_badge(state, detail, voice_ready)
+        return
+    generator = chat_with_backend(text, history, synthesize_voice and voice_ready, stored, getattr(request, "session_hash", None))
+    last = None
+    try:
+        async for output in generator:
+            last = output
+            next_state = {**output[4], "voice_ready": voice_ready}
+            yield output[0], output[1], output[2], _activity("busy", output[3]), next_state, gr.skip(), gr.skip(), gr.skip(), _health_badge(state, detail, voice_ready)
+    finally:
+        await generator.aclose()
+    if last is None:
+        last = (message, display, None, "", stored)
+    failed = bool(last[0])
+    activity = _activity("error", "回复失败，输入已保留。") if failed else _activity("ready", "" if voice_ready else "语音服务尚未配置。")
+    if not failed and ("语音生成失败" in last[3] or "声音暂时没有连上" in last[3]):
+        activity = _activity("setup", "文字已返回，语音暂不可用。")
+    badge = _health_badge("offline", "回复失败", False) if failed else _health_badge(state, detail, voice_ready)
+    yield gr.update(interactive=True), gr.skip(), gr.skip(), activity, {**last[4], "voice_ready": voice_ready}, *_idle_controls(voice_ready), badge
+
+
+def stop_submission(message, history, conversation_state=None):
+    model, display = _state_histories(conversation_state, history)
+    draft = message or ""
+    state = conversation_state
+    if isinstance(state, str):
+        try:
+            state = json.loads(state)
+        except ValueError:
+            state = {}
+    if isinstance(state, dict) and state.get("pending_turn") and display:
+        last_user = max((index for index, item in enumerate(display) if item["role"] == "user"), default=-1)
+        if last_user >= 0:
+            if state.get("model_complete") and model and model[-1]["role"] == "assistant":
+                display = [*display[:last_user + 1], *({"role": "assistant", "content": text} for text in _split_into_bubbles(model[-1]["content"]))]
+            elif last_user == len(display) - 1:
+                draft = draft or display.pop()["content"]
+            else:
+                model = [*model, *_clean_history(display[last_user:])]
+    voice_ready = _voice_ready(conversation_state)
+    stored = {**_new_conversation_state(model, display), "voice_ready": voice_ready}
+    return gr.update(value=draft, interactive=True), display, None, _activity("idle", "已停止回复。"), stored, *_idle_controls(), gr.skip()
 
 
 def reset_conversation():
     return "", [], None, "新的对话，慢慢开始。", _new_conversation_state([], [])
+
+
+def reset_ui_conversation(conversation_state=None):
+    voice_ready = _voice_ready(conversation_state)
+    stored = {**_new_conversation_state([], []), "voice_ready": voice_ready}
+    return gr.update(value="", interactive=True), [], None, _activity("idle", ""), stored, *_idle_controls(), gr.skip()
 
 
 def build_demo() -> gr.Blocks:
@@ -555,6 +652,8 @@ def build_demo() -> gr.Blocks:
     }
     if "css" in inspect.signature(gr.Blocks).parameters:
         block_options.update(css=UI_CSS, theme=_ui_theme())
+    if "js" in inspect.signature(gr.Blocks).parameters:
+        block_options["js"] = UI_JS
     avatar = _asset_url("luyao-avatar.png")
     with gr.Blocks(**block_options) as demo:
         initial_state = _new_conversation_state([], [])
@@ -641,20 +740,26 @@ def build_demo() -> gr.Blocks:
                     with gr.Row(elem_id="luyao-input-row"):
                         message = gr.Textbox(
                             label="消息", show_label=False, container=False,
-                            placeholder="把此刻的心情告诉我…", lines=2, max_lines=5,
+                            placeholder="此刻的心情…", lines=2, max_lines=5,
                             elem_id="luyao-message", scale=1, min_width=0,
                         )
-                        send = gr.Button(
-                            "发送", variant="primary", size="sm",
-                            icon=str(UI_ASSETS / "icons" / "send.svg"),
-                            elem_id="luyao-send", scale=0, min_width=84,
-                        )
+                        with gr.Row(elem_id="luyao-submit-controls"):
+                            send = gr.Button(
+                                "发送", variant="primary", size="sm",
+                                icon=str(UI_ASSETS / "icons" / "send.svg"),
+                                elem_id="luyao-send", scale=0, min_width=48,
+                            )
+                            stop = gr.Button(
+                                "停止", size="sm", visible=False,
+                                icon=str(UI_ASSETS / "icons" / "square.svg"),
+                                elem_id="luyao-stop", scale=0, min_width=48,
+                            )
                     with gr.Row(elem_id="luyao-composer-footer"):
                         synthesize_voice = gr.Checkbox(
                             label="语音回复", value=True, container=False,
                             elem_id="luyao-voice-toggle", scale=0, min_width=110,
                         )
-                        status = gr.Markdown("随时开始。", elem_id="luyao-activity")
+                        status = gr.HTML(_activity("checking", ""), elem_id="luyao-activity")
 
         inputs = [
             message,
@@ -668,34 +773,45 @@ def build_demo() -> gr.Blocks:
             audio,
             status,
             conversation_state,
+            send,
+            stop,
+            synthesize_voice,
+            connection,
         ]
         event_options = {
-            "fn": chat_with_backend,
+            "fn": submit_message,
             "inputs": inputs,
             "outputs": outputs,
             "concurrency_limit": 1,
             "concurrency_id": "luyao_chat",
             "show_progress": "hidden",
+            "trigger_mode": "once",
         }
         send_event = send.click(**event_options)
         submit_event = message.submit(**event_options)
         new_chat.click(
-            reset_conversation, outputs=outputs, queue=False, show_progress="hidden",
+            reset_ui_conversation, inputs=conversation_state, outputs=outputs, queue=False, show_progress="hidden",
+            cancels=[send_event, submit_event],
+        ).then(fn=None, inputs=None, outputs=None, queue=False, js="() => {window.__luyaoUi?.sync(); document.querySelector('#luyao-message textarea')?.focus(); return [];}")
+        chatbot.clear(
+            reset_ui_conversation, inputs=conversation_state, outputs=outputs, queue=False, show_progress="hidden",
             cancels=[send_event, submit_event],
         )
-        chatbot.clear(
-            reset_conversation, outputs=outputs, queue=False, show_progress="hidden",
-            cancels=[send_event, submit_event],
+        stop.click(
+            stop_submission, inputs=[message, chatbot, conversation_state], outputs=outputs,
+            queue=False, show_progress="hidden", cancels=[send_event, submit_event],
         )
         for starter, prompt in starters:
             starter.click(
                 lambda value=prompt: value, outputs=message,
                 queue=False, show_progress="hidden",
-            )
+            ).then(fn=None, inputs=None, outputs=None, queue=False, js="() => {window.__luyaoUi?.sync(); document.querySelector('#luyao-message textarea')?.focus(); return [];}")
         health_button.click(
-            backend_health, outputs=connection, queue=False, show_progress="hidden"
+            backend_health, outputs=connection, queue=False, show_progress="hidden",
         )
-        demo.load(backend_health, outputs=connection, show_progress="hidden")
+        demo.load(
+            backend_health, outputs=connection, show_progress="hidden",
+        )
         demo.load(
             _restore_display,
             inputs=conversation_state,

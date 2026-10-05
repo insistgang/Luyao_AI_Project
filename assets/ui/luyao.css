@@ -1,6 +1,7 @@
 body {
   margin: 0;
   background: #f6f7f6;
+  overflow: hidden;
 }
 
 .gradio-container {
@@ -24,10 +25,13 @@ body {
   --checkbox-background-color-selected: #21694f;
   --checkbox-border-color-selected: #21694f;
   font-family: "PingFang SC", "Microsoft YaHei", sans-serif !important;
-  max-width: 1440px !important;
+  max-width: none !important;
   width: 100% !important;
-  margin: 0 auto !important;
+  height: var(--luyao-viewport-height, 100dvh) !important;
+  min-height: 0 !important;
+  margin: 0 !important;
   padding: 0 !important;
+  overflow: hidden;
   letter-spacing: 0 !important;
 }
 
@@ -39,39 +43,39 @@ body {
 }
 
 .gradio-container footer { display: none !important; }
-.gradio-container .main { padding: 0 !important; }
+.gradio-container .main { height: 100%; min-height: 0; padding: 0 !important; }
 #luyao-shell .html-container { padding: 0 !important; }
 #luyao-shell .prose { max-width: none; }
 
-/* Shell spacing stays responsive after Gradio scopes media-query selectors. */
 #luyao-shell {
-  width: calc(100% - 48px);
-  margin: 24px;
+  width: 100%;
+  height: var(--luyao-viewport-height, 100dvh);
+  min-height: 0;
+  margin: 0;
   display: grid !important;
-  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-columns: 216px minmax(0, 1fr);
   gap: 0 !important;
-  height: calc(100dvh - 48px);
-  min-height: 620px;
   overflow: hidden;
-  border: 1px solid #dfe6e0;
-  border-radius: 8px;
+  border: 0 !important;
+  border-radius: 0 !important;
   background: #ffffff;
-  box-shadow: 0 12px 36px #23392a08;
+  box-shadow: none !important;
 }
 
 #luyao-sidebar {
   min-width: 0 !important;
-  padding: 32px 24px 22px;
+  min-height: 0;
+  padding: 22px 18px 16px;
   background: #eff3ef;
   border-right: 1px solid #e0e7e1;
-  gap: 22px;
+  gap: 16px;
 }
 
 #luyao-brand { flex: 0 0 auto !important; }
-.luyao-brand { display: flex; flex-direction: column; gap: 8px; }
+.luyao-brand { display: flex; flex-direction: column; gap: 5px; }
 .brand-name {
   color: #284936;
-  font: 700 34px/1.2 "Songti SC", "Noto Serif SC", serif;
+  font: 700 28px/1.2 "Songti SC", "Noto Serif SC", serif;
 }
 .brand-caption { color: #6d7d72; font-size: 12px; }
 
@@ -92,19 +96,19 @@ body {
 }
 
 #luyao-new-chat img { width: 18px; height: 18px; opacity: .62; }
-#luyao-portrait { flex: 1 1 auto !important; }
-.sidebar-portrait { margin-top: 10px; text-align: center; }
+#luyao-portrait { flex: 0 0 auto !important; }
+.sidebar-portrait { margin: auto 0; text-align: center; }
 .sidebar-portrait img {
-  width: 154px;
-  height: 154px;
+  width: 112px;
+  height: 112px;
   object-fit: cover;
   border-radius: 50%;
-  border: 6px solid #ffffff80;
+  border: 4px solid #ffffff80;
 }
 .sidebar-portrait p {
-  margin: 23px 0 0;
+  margin: 14px 0 0;
   color: #48624f;
-  font: 400 24px/1.7 "Songti SC", "Noto Serif SC", serif;
+  font: 400 17px/1.6 "Songti SC", "Noto Serif SC", serif;
 }
 
 #luyao-player {
@@ -115,7 +119,7 @@ body {
   border-radius: 0;
   overflow: hidden;
 }
-#luyao-player > button { padding: 16px 0; font-size: 12px; color: #6e8375; }
+#luyao-player > button { min-height: 44px; padding: 10px 0; font-size: 12px; color: #6e8375; }
 #luyao-player > div { padding: 0 !important; }
 #luyao-audio { max-width: 100%; min-width: 0; background: #ffffff80; }
 #luyao-user { flex: 0 0 auto !important; }
@@ -141,22 +145,30 @@ body {
 .sidebar-user b { color: #405c49; font-size: 13px; font-weight: 500; }
 .sidebar-user div > span { color: #8a978d; font-size: 11px; }
 
-#luyao-main { min-width: 0 !important; min-height: 0; gap: 0 !important; }
+#luyao-main {
+  display: flex !important;
+  flex-direction: column;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: 100%;
+  overflow: hidden;
+  gap: 0 !important;
+}
 #luyao-header {
   flex: 0 0 auto !important;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
   gap: 10px;
-  min-height: 95px;
-  padding: 22px 32px;
+  min-height: 68px;
+  padding: 12px 24px;
   border-bottom: 1px solid #edf0ed;
 }
 #luyao-heading { flex: 1 1 auto !important; min-width: 0; }
 .conversation-heading { display: flex; gap: 12px; align-items: center; }
-.conversation-heading img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
-.conversation-heading h1 { margin: 0; color: #334c3c; font-size: 16px; font-weight: 600; line-height: 1.4; }
-.conversation-heading p { margin: 5px 0 0; color: #6f7e72; font-size: 11px; }
+.conversation-heading img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+.conversation-heading h1 { margin: 0; color: #334c3c; font-size: 15px; font-weight: 600; line-height: 1.4; }
+.conversation-heading p { margin: 3px 0 0; color: #6f7e72; font-size: 11px; }
 #luyao-connection { flex: 0 0 auto !important; min-width: 0; width: auto; }
 .connection-badge {
   display: inline-flex;
@@ -178,30 +190,45 @@ body {
 .connection-badge[data-state='offline'] { color: #a0655d; background: #fbefed; }
 .connection-badge[data-state='offline'] .connection-dot { background: #bb8278; }
 #luyao-refresh {
-  min-height: 32px;
-  height: 32px;
-  padding: 0 8px;
+  flex: 0 0 46px !important;
+  min-width: 46px !important;
+  width: 46px;
+  min-height: 46px;
+  height: 46px;
+  padding: 0;
   border: 0;
   background: transparent;
-  border-radius: 6px;
+  border-radius: 8px;
   color: #64776c;
-  font-size: 11px;
+  font-size: 0;
   font-weight: 400;
   box-shadow: none;
 }
-#luyao-refresh img { width: 14px; height: 14px; opacity: .5; }
+#luyao-refresh img { width: 17px; height: 17px; opacity: .62; }
+#luyao-refresh button {
+  width: 46px !important;
+  min-width: 46px !important;
+  height: 46px !important;
+  padding: 0 !important;
+  font-size: 0 !important;
+}
+#luyao-refresh button img { width: 17px; height: 17px; }
+#luyao-refresh:hover { background: #f1f4f1; }
 
 #luyao-chat {
   flex: 1 1 0 !important;
-  min-height: 180px !important;
+  min-height: 0 !important;
   height: auto !important;
   border: 0 !important;
   border-radius: 0 !important;
   background: #ffffff !important;
   box-shadow: none !important;
-  padding: 12px 24px 0;
+  padding: 10px 24px 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
-#luyao-chat > .wrapper { height: 100%; }
+#luyao-chat > .wrapper { min-height: 100%; height: auto; }
 #luyao-chat .bubble-wrap { background: #ffffff; }
 #luyao-chat .message {
   font-size: 14px;
@@ -214,12 +241,12 @@ body {
 #luyao-chat .message.bot { background: #f4f5f4 !important; color: #39483e; }
 #luyao-chat .message p { margin: 0; }
 #luyao-chat img.avatar { width: 30px; height: 30px; object-fit: cover; }
-.chat-welcome { width: 100%; text-align: center; padding: 32px 12px; }
+.chat-welcome { width: 100%; text-align: center; padding: 24px 12px; }
 .chat-welcome > img {
   display: block;
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 23px;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
   border-radius: 50%;
   object-fit: cover;
   border: 4px solid #eff3ee;
@@ -228,7 +255,7 @@ body {
 .chat-welcome h2 {
   margin: 14px 0 12px;
   color: #34503e;
-  font: 500 27px/1.55 "Songti SC", "Noto Serif SC", serif;
+  font: 500 22px/1.5 "Songti SC", "Noto Serif SC", serif;
   text-wrap: balance;
 }
 .chat-welcome p { margin: 0; color: #66766b; font-size: 12px; line-height: 2; }
@@ -236,8 +263,8 @@ body {
 #luyao-starters {
   flex: 0 0 auto !important;
   justify-content: center;
-  padding: 7px 28px 14px;
-  gap: 14px;
+  padding: 4px 24px 10px;
+  gap: 12px;
 }
 #luyao-starters .starter-prompt {
   flex: 0 1 auto !important;
@@ -258,17 +285,17 @@ body {
 #luyao-main:has(#luyao-chat .message) #luyao-starters { display: none !important; }
 #luyao-composer {
   flex: 0 0 auto !important;
-  margin: 0 28px 24px;
+  margin: 0 24px 16px;
   width: auto;
   border: 1px solid #dce5dd;
   border-radius: 8px;
   background: #ffffff;
-  box-shadow: 0 4px 18px #213d2705;
-  padding: 10px 12px 9px;
+  box-shadow: none;
+  padding: 8px 10px;
   gap: 3px !important;
 }
 #luyao-composer:focus-within { border-color: #94b29e; box-shadow: 0 0 0 3px #e6efe8; }
-#luyao-input-row { gap: 12px; flex-wrap: nowrap; align-items: center; }
+#luyao-input-row { gap: 8px; flex-wrap: nowrap; align-items: center; }
 #luyao-message { min-width: 0 !important; border: 0; background: transparent; }
 #luyao-message label { background: transparent; border: 0; box-shadow: none; }
 #luyao-message textarea {
@@ -282,36 +309,82 @@ body {
   resize: none;
 }
 #luyao-message textarea::placeholder { color: #718074; }
-#luyao-send {
-  height: 42px;
-  min-height: 42px;
-  width: 88px;
-  padding: 0 14px;
+#luyao-send,
+#luyao-stop {
+  flex: 0 0 46px !important;
+  min-width: 46px !important;
+  width: 46px;
+  min-height: 46px;
+  height: 46px;
+  padding: 0;
   background: #21694f;
   color: #ffffff;
   border: 0;
-  border-radius: 7px;
-  font-size: 12px;
+  border-radius: 8px;
+  font-size: 0;
   font-weight: 500;
   box-shadow: none;
 }
 #luyao-send:hover { background: #18543e; }
-#luyao-send img { width: 15px; height: 15px; filter: invert(1); }
-#luyao-composer-footer { align-items: center; gap: 12px; flex-wrap: nowrap; }
-#luyao-voice-toggle { flex: 0 0 110px !important; min-width: 0 !important; width: 110px; }
+#luyao-send img,
+#luyao-stop img { width: 17px; height: 17px; filter: invert(1); }
+#luyao-send button,
+#luyao-stop button {
+  width: 46px !important;
+  min-width: 46px !important;
+  height: 46px !important;
+  padding: 0 !important;
+  border: 0;
+  border-radius: 8px;
+  font-size: 0 !important;
+}
+#luyao-send button { background: #21694f; color: #ffffff; }
+#luyao-send button:hover { background: #18543e; }
+#luyao-stop { background: #fbefed; color: #a0655d; }
+#luyao-stop button { background: #fbefed; color: #a0655d; }
+#luyao-stop img { filter: none; opacity: .8; }
+#luyao-stop:hover,
+#luyao-stop button:hover { background: #f6e3e0; }
+#luyao-submit-controls {
+  display: grid !important;
+  grid-template: 48px / 48px;
+  flex: 0 0 48px !important;
+  min-width: 48px !important;
+  width: 48px !important;
+  height: 48px;
+  align-items: center;
+  justify-items: center;
+  gap: 0 !important;
+}
+#luyao-submit-controls > * {
+  grid-area: 1 / 1;
+  min-width: 46px !important;
+  width: 46px !important;
+  height: 46px;
+}
+#luyao-submit-controls button { width: 46px; min-width: 46px; height: 46px; padding: 0; }
+#luyao-composer-footer { align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+#luyao-voice-toggle { flex: 0 0 auto !important; min-width: 0 !important; width: auto; }
 #luyao-voice-toggle label { border: 0; background: transparent; gap: 7px; padding: 0 4px; }
 #luyao-voice-toggle span { color: #64776c; font-size: 11px; }
 #luyao-voice-toggle input { width: 13px; height: 13px; accent-color: #ba8575; }
-#luyao-activity { flex: 1 1 auto !important; min-width: 0; text-align: right; }
-#luyao-activity p { margin: 0; color: #64776c; font-size: 11px; line-height: 1.5; }
+#luyao-activity { flex: 1 1 160px !important; min-width: 0; text-align: right; }
+#luyao-activity p { margin: 0; color: #64776c; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.activity-message[data-state="ready"] { color: #27704e; }
+.activity-message[data-state="setup"] { color: #805b2b; }
+.activity-message[data-state="offline"],
+.activity-message[data-state="error"] { color: #a0655d; }
+
+.gradio-container :focus-visible {
+  outline: 2px solid #21694f !important;
+  outline-offset: 2px;
+}
 
 @media (max-width: 900px) {
   #luyao-shell { grid-template-columns: 210px minmax(0, 1fr); }
-  #luyao-sidebar { padding: 28px 18px 20px; }
-  #luyao-header { padding: 20px; }
-  .sidebar-portrait img { width: 135px; height: 135px; }
-  .sidebar-portrait p { font-size: 22px; }
-  #luyao-composer { margin: 0 18px 18px; }
+  #luyao-sidebar { padding: 18px 14px 14px; }
+  #luyao-header { padding-right: 18px; padding-left: 18px; }
+  #luyao-composer { margin-right: 18px; margin-left: 18px; }
 }
 
 @media (max-width: 680px) {
@@ -320,51 +393,60 @@ body {
     margin: 0;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
-    height: 100dvh;
-    min-height: 520px;
+    height: var(--luyao-viewport-height, 100dvh);
+    min-height: 0;
     border: 0;
-    border-radius: 0;
-    box-shadow: none;
   }
   #luyao-sidebar {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0 14px;
-    padding: 14px 18px;
+    min-height: 0;
+    padding: 8px 12px;
     border-right: 0;
     border-bottom: 1px solid #e3eae4;
     align-items: center;
   }
-  .luyao-brand { gap: 4px; }
-  .brand-name { font-size: 25px; }
-  .brand-caption { font-size: 10px; }
-  #luyao-new-chat { width: 96px; height: 36px; min-height: 36px; padding: 0 12px; font-size: 11px; }
+  .luyao-brand { gap: 2px; }
+  .brand-name { font-size: 22px; }
+  .brand-caption { font-size: 11px; }
+  #luyao-new-chat { width: 92px; height: 40px; min-height: 40px; padding: 0 10px; font-size: 12px; }
   #luyao-portrait, #luyao-user { display: none !important; }
   #luyao-player { grid-column: 1 / -1; border: 0; }
-  #luyao-player > button { padding: 9px 0 0; font-size: 10px; }
-  #luyao-header { min-height: 66px; padding: 12px 16px; gap: 4px; }
-  .conversation-heading img { width: 30px; height: 30px; }
+  #luyao-player > button { min-height: 36px; padding: 6px 0 0; font-size: 11px; }
+  #luyao-header { min-height: 58px; padding: 8px 12px; gap: 4px; }
+  .conversation-heading img { width: 28px; height: 28px; }
   .conversation-heading { gap: 8px; }
-  .conversation-heading h1 { font-size: 13px; }
-  .conversation-heading p { font-size: 10px; margin-top: 3px; }
-  .connection-badge { font-size: 10px; padding: 6px 8px; gap: 5px; }
-  #luyao-refresh { min-width: 30px !important; width: 30px; padding: 0 7px; font-size: 0; gap: 0; }
-  #luyao-refresh img { width: 13px; height: 13px; }
-  #luyao-chat { padding: 4px 8px 0; min-height: 130px !important; }
-  .chat-welcome { padding: 24px 8px; }
-  .chat-welcome > img { width: 68px; height: 68px; margin-bottom: 18px; }
-  .chat-welcome h2 { font-size: 23px; margin: 10px 0 8px; }
-  .chat-welcome p { font-size: 11px; line-height: 1.9; }
-  #luyao-starters { padding: 4px 12px 12px; gap: 9px; }
-  #luyao-starters .starter-prompt { font-size: 10px; }
-  #luyao-composer { margin: 0 12px max(12px, env(safe-area-inset-bottom)); padding: 8px 10px; }
+  .conversation-heading h1 { font-size: 14px; }
+  .conversation-heading p { font-size: 11px; margin-top: 2px; }
+  #luyao-connection { max-width: 40%; }
+  .connection-badge { font-size: 11px; padding: 6px 7px; gap: 5px; }
+  #luyao-refresh { flex-basis: 46px !important; min-width: 46px !important; width: 46px; }
+  #luyao-refresh img { width: 17px; height: 17px; }
+  #luyao-chat { padding: 4px 10px 0; }
+  .chat-welcome { padding: 18px 8px; }
+  .chat-welcome > img { width: 56px; height: 56px; margin-bottom: 12px; }
+  .chat-welcome h2 { font-size: 19px; margin: 8px 0 6px; }
+  .chat-welcome p { font-size: 13px; line-height: 1.7; }
+  #luyao-starters { padding: 3px 12px 8px; gap: 8px; flex-wrap: wrap; }
+  #luyao-starters .starter-prompt { font-size: 12px; }
+  #luyao-composer { margin: 0 10px max(8px, env(safe-area-inset-bottom)); padding: 7px 8px; }
   #luyao-input-row { gap: 6px; }
-  #luyao-message textarea { font-size: 13px; }
-  #luyao-send { min-width: 68px !important; width: 68px; height: 38px; min-height: 38px; padding: 0 9px; font-size: 11px; }
-  #luyao-composer-footer { gap: 8px; }
-  #luyao-activity p, #luyao-voice-toggle span { font-size: 10px; }
+  #luyao-message textarea { font-size: 14px; }
+  #luyao-send,
+  #luyao-stop { flex-basis: 46px !important; min-width: 46px !important; width: 46px; height: 46px; min-height: 46px; }
+  #luyao-composer-footer { gap: 6px 10px; }
+  #luyao-activity { flex-basis: 140px !important; text-align: left; }
+  #luyao-activity p,
+  #luyao-voice-toggle span { font-size: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .gradio-container * { animation: none !important; transition: none !important; }
+}
+
+@media (max-width: 680px) and (max-height: 600px) {
+  .chat-welcome > img, .chat-welcome p, .welcome-eyebrow { display: none; }
+  .chat-welcome { padding: 12px 0; }
+  .chat-welcome h2 { margin: 0; font-size: 17px; }
 }
