@@ -12,6 +12,8 @@
 
 公开使用意味着任何访客都可能消耗账号额度。当前长期记忆使用默认身份 `awu_001`，不同访客可能共享该身份的记忆；多人公开使用前应实现访客记忆隔离，并避免输入私密信息。调用限额和费用预算属于后续加固事项，不是公开模式的启动条件。
 
+当前免登录部署设置 `LUYAO_MEMORY_EXTRACTOR=false`，暂不把访客对话自动写入共享长期记忆。已有记忆卷和浏览器内的多轮上下文保留；完成访客身份隔离后可重新开启该选项。私有或受邀部署的默认值仍为 `true`。
+
 ```bash
 docker compose --env-file .env.ecs -f compose.ecs.yml config --quiet
 docker compose --env-file .env.ecs -f compose.ecs.yml build

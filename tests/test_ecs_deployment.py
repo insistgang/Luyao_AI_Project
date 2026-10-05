@@ -146,6 +146,7 @@ class EcsDeploymentTests(unittest.TestCase):
         self.assertEqual(app["ports"], ["127.0.0.1:17860:7860"])
         self.assertEqual(app["environment"]["LUYAO_REQUIRE_AUTH"], "${LUYAO_REQUIRE_AUTH:-true}")
         self.assertEqual(app["environment"]["LUYAO_ALLOW_PUBLIC"], "${LUYAO_ALLOW_PUBLIC:-false}")
+        self.assertEqual(app["environment"]["LUYAO_MEMORY_EXTRACTOR"], "${LUYAO_MEMORY_EXTRACTOR:-true}")
         self.assertTrue({"memories:/app/chroma_db", "runtime:/app/runtime-logs", "embeddings:/home/user/.cache/chroma"} <= set(app["volumes"]))
 
 
